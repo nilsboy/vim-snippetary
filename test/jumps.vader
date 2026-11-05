@@ -1,0 +1,31 @@
+Before:
+  let g:snippetary_snippet_dirs = ['/tmp/opencode/jump_snips']
+  filetype plugin indent on
+  new
+  setlocal filetype=smoke noexpandtab shiftwidth=4 tabstop=8
+After:
+  bwipeout!
+Execute (forward walk with typed content, $0 exit):
+  call feedkeys('imulti' . "\<tab>" . 'one' . "\<f12>" . "\<tab>" . 'two'
+              \ . "\<f12>" . "\<tab>" . "\<esc>", 'xt')
+  Assert getline(1) == 'line1 one two', 'l1=[' . getline(1) . ']'
+  Assert snippetary#active() == {}, 'session must be gone'
+Execute (backward jump re-enters previous stop, typing replaces it):
+  call feedkeys('imulti' . "\<tab>" . 'one' . "\<f12>" . "\<tab>" . 'two'
+              \ . "\<f12>" . "\<s-tab>" . 'TWO' . "\<f12>"
+              \ . "\<tab>" . "\<esc>", 'xt')
+  Assert getline(1) == 'line1 TWO two', 'l1=[' . getline(1) . ']'
+Execute (typing in a stop updates its mirror live):
+  call feedkeys('imir' . "\<tab>" . 'abc' . "\<f12>"
+              \ . "\<tab>" . "\<esc>", 'xt')
+  Assert getline(1) == 'start abc end abc', 'l1=[' . getline(1) . ']'
+  Assert getline(2) == '    ', 'l2=[' . getline(2) . ']'
+Execute (a second edit pass re-syncs the mirror):
+  call feedkeys('imir' . "\<tab>" . 'abc' . "\<f12>" . 'def' . "\<f12>"
+              \ . "\<tab>" . "\<esc>", 'xt')
+  Assert getline(1) == 'start abcdef end abcdef', 'live=[' . getline(1) . ']'
+Execute (non-empty stop jump enters select mode, typing replaces):
+  call feedkeys('ifn' . "\<tab>" . 'NAME' . "\<f12>" . "\<tab>" . 'ARG'
+              \ . "\<f12>" . "\<tab>" . "\<esc>", 'xt')
+  Assert getline(1) == 'fn NAME:', 'l1=[' . getline(1) . ']'
+  Assert getline(2) == '    return ARG', 'l2=[' . getline(2) . ']'

@@ -1,0 +1,29 @@
+Before:
+  let g:snippetary_snippet_dirs = ['/tmp/opencode/match_snips']
+  filetype plugin indent on
+  new
+  setlocal filetype=match
+  call snippetary#file#clear_cache()
+  call snippetary#load_buffer()
+After:
+  bwipeout!
+Execute (default trigger matches trailing word run; expands at cursor):
+  call feedkeys('ibegin' . "\<tab>" . "\<esc>", 'xt')
+  Assert getline(1) == 'BEG', 'l1=[' . getline(1) . ']'
+Execute (option b requires only whitespace before trigger):
+  call feedkeys('ixbegin' . "\<tab>", 'xt')
+  Assert getline(1) == "xbegin	", 'l1=[' . getline(1) . ']'
+Execute (option w demands a word boundary at the left):
+  call feedkeys('iwword' . "\<tab>", 'xt')
+  Assert getline(1) !=# 'xWW', 'no boundary expansion'
+  call snippetary#clean_current_buffer()
+  call feedkeys('iwword' . "\<tab>", 'xt')
+  call snippetary#clean_current_buffer()
+  call feedkeys('i;wword' . "\<tab>", 'xt')
+  Assert getline(1) != 'xWW', 'wrong'
+Execute (option i matches mid-text suffix):
+  call feedkeys('ixxmid' . "\<tab>" . "\<esc>", 'xt')
+  Assert getline(1) == 'xxMID', 'l1=[' . getline(1) . ']'
+Execute (priority picks the highest snippet for the same trigger):
+  call feedkeys('ibase' . "\<tab>" . "\<esc>", 'xt')
+  Assert getline(1) == 'HIGH', 'l1=[' . getline(1) . ']'

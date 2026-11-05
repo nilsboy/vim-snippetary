@@ -1,0 +1,27 @@
+Before:
+  let g:snippetary_snippet_dirs = ['/tmp/opencode/corpus_snips']
+  filetype plugin indent on
+  new
+After:
+  bwipeout!
+Execute (parses real vim-snippets files without errors):
+  set filetype=c
+  call snippetary#load_buffer()
+  let snips = snippetary#session().snips
+  Assert len(keys(snips)) > 30, 'loaded=' . len(keys(snips))
+  set filetype=html
+  call snippetary#load_buffer()
+  let snips = snippetary#session().snips
+  Assert len(keys(snips)) > 40, 'loaded=' . len(keys(snips))
+Execute (expands a corpus snippet end to end):
+  set filetype=c
+  unlet b:snippetary
+  call snippetary#load_buffer()
+  call snippetary#file#clear_cache()
+  let sn = snippetary#session().snips
+  Assert has_key(sn, 'main'), 'main available: ' . string(keys(sn)[0:9])
+  call setline(1, 'main')
+  normal! $
+  call feedkeys('a' . "\<tab>", 'xt')
+  call feedkeys("\<esc>", 'xt')
+  Assert getline(1) =~# 'int main', 'l1=[' . getline(1) . ']'

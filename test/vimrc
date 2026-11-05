@@ -1,0 +1,16 @@
+" vimrc used while running the vader test suite (headless).
+set nocompatible
+" keep the user's nvim config out of the build: explicit rtp
+let $NVIM_APPNAME = ''
+exec 'set runtimepath=' . '/src/vim-snippetary,/tmp/opencode/vader.vim,' . $VIMRUNTIME
+" the user pack contains a stale old-named snippetary plugin; keep it out
+set packpath=
+filetype plugin indent on
+set nomore
+" headless poke: CursorMoved(I) do not fire per keystroke during feedkeys in
+" headless runs, so tests drive cursor_update() through this key.
+imap <silent> <f12> <C-R>=snippetary#cursor_update()<CR>
+smap <silent> <f12> <Esc>a<C-R>=snippetary#cursor_update()<CR>
+set noswapfile
+set viminfo=
+set backspace=2

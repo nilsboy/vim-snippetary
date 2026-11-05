@@ -1,0 +1,12 @@
+Before:
+  let g:snippetary_snippet_dirs = ['/tmp/opencode/vader_snips']
+  filetype plugin indent on
+  new
+  setlocal filetype=smoke noexpandtab shiftwidth=4
+After:
+  bwipeout!
+Execute (expands a simple snippet through the mapping):
+  call feedkeys('iif' . "\<tab>" . 'x > 1', 'xt')
+  Assert getline(1) == 'if x > 1:', 'line1=[' . getline(1) . ']'
+  Assert getline(2) == '    ', 'line2=[' . getline(2) . ']'
+  call feedkeys("\<esc>", 'xt')

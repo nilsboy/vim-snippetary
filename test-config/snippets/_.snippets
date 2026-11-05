@@ -1,0 +1,26 @@
+# demo snippets for the test-config (apply to every filetype, _ file)
+
+snippet hello "greets the user"
+Hello from snippetary ${1:name}!$0
+endsnippet
+
+snippet date "today"
+`date +%F`$0
+endsnippet
+
+snippet wrap "wraps the ${VISUAL}"
+> ${VISUAL} <$0
+endsnippet
+
+# python blocks below demonstrate the graceful degradation path
+
+priority 50
+
+snippet python-demo "warns about python interpolation"
+!p snip.rv = "python interpolation "$0
+endsnippet
+
+global !p
+def t(s):
+    return s
+endglobal

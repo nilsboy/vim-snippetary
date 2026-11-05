@@ -1,0 +1,77 @@
+*snippetary.txt*  UltiSnips-format snippets in pure vimscript
+
+Author:  snippetary contributors
+License: MIT
+
+INTRODUCTION                                        *snippetary*
+
+vim-snippetary is a snippet engine for Vim and Neovim that reads
+UltiSnips-format |UltiSnips| snippet files but is written entirely in
+classic vimscript: no Python and no |text-properties| are required, so
+it also runs in minimal builds.
+
+SETUP                                     *snippetary-setup*
+
+The plugin loads itself on startup. Snippet files are looked up in the
+directories listed in |g:snippetary_snippet_dirs| (default:
+['UltiSnips'], or g:UltiSnipsSnippetDirectories when defined). Files
+inside those directories are recognized as `ft.snippets`,
+`ft_*.snippets`, `ft/*.snippets`, and `_.snippets` (applies to all
+filetypes). `extends` chains are followed.
+
+While a `*.snippets` file is loaded its filetype is set to `snippets`
+with matching syntax support if available.
+
+USAGE                                     *snippetary-usage*
+
+Type a snippet trigger and press |g:snippetary_expand_trigger| (default
+<tab>). The engine expands the snippet, selects the first tabstop in
+selection mode and keeps mirrors in sync while you type. <tab> again
+jumps to the next tabstop; |g:snippetary_jump_backward_trigger|
+(default <s-tab>) jumps backward. Reaching the ${VISUAL} position or a
+tabstop 0 (or jumping backward from the first stop) ends the session.
+Editing somewhere outside the running tabstop abandons the session; the
+buffer text is always left as plain text.
+
+${VISUAL} inserts the text captured by the last visual selection made
+with the expand trigger in visual mode (the text is cut from the
+buffer).
+
+MAPPINGS                                  *snippetary-mappings*
+
+The plugin defines these <Plug> mappings; default user maps are created
+for <tab>/<s-tab>:
+
+  <Plug>(snippetary-next-or-trigger)   expand/jump next (insert+select)
+  <Plug>(snippetary-back)              jump backward (insert+select)
+  <Plug>(snippetary-visual)            capture visual for ${VISUAL}
+
+Snippet-file syntax                       *snippetary-syntax*
+
+    snippet trigger ["description" ["options"]]
+      lines of body, with indented lines kept
+    endsnippet
+
+Options understood: w (word boundary), i (in-word match),
+b (only whitespace may precede the trigger), m (strip trailing
+whitespace), t (keep literal tabs), x (exit insert after the last
+tabstop). `r`/`e` snippets must be skipped for now.
+
+Directives: priority N, extends ft[,ft...], global ... endglobal
+(python content is skipped with a warning), clearsnippets, context.
+
+Escapes follow UltiSnips: backslash escapes { } $ and backtick; $$ is
+an escape for a literal dollar.
+
+COMMANDS                                  *snippetary-commands*
+
+:SnippetaryReload   reread snippet files and reset sessions
+:SnippetaryClean    end all snippet sessions in the current buffer
+:SnippetaryVersion  print the version
+
+LIMITATIONS                              *snippetary-limitations*
+
+Python interpolation (!p) is skipped; transforms are dropped (the
+tabstop or mirror is kept); choice lists become their first choice;
+regular-expression and eval-option triggers do not match; multi-line
+typing is tracked at the extent level only.

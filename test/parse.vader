@@ -1,0 +1,51 @@
+Before:
+  silent filetype plugin indent on
+Execute (tokens: plain text and bare mirrors):
+  let t = snippetary#parse#tokens('hello $1 world $2')
+  Assert len(t) == 1 && len(t[0]) == 4, string(t)
+  Assert t[0][0] == 'hello ' && t[0][1][0] == 'm' && t[0][1][1] == 1
+  Assert t[0][3][0] == 'm' && t[0][3][1] == 2, string(t)
+Execute (tokens: placeholder with default becomes p):
+  let t = snippetary#parse#tokens('fn ${1:arg}')
+  Assert t[0][1][0] == 'p' && t[0][1][1] == 1, string(t)
+Execute (tokens: nested placeholder defaults):
+  let t = snippetary#parse#tokens('a ${1:one${2:two}}')
+  let node = t[0][1]
+  Assert node[2][0][0] == 'one' && node[2][0][1][1] == 2, string(node)
+Execute (tokens: transform and choices degrade):
+  let t = snippetary#parse#tokens('${1/a/b/} ${2|left,right|}')
+  Assert t[0][0][0] ==# 'x' && t[0][0][1] == 1, string(t)
+  Assert t[0][1] == ' '
+  Assert t[0][2][0] ==# 'p' && t[0][2][1] == 2 && t[0][2][2][0][0] == 'left', string(t)
+Execute (tokens: escapes per ultisnips raw rules):
+  let t = snippetary#parse#tokens("\\$\\{1\\}\\\\ \\`x\\` \\n")
+  Assert t[0][0][0] ==# '$', string(t)
+  Assert t[0][0][4:5] ==# "\\\\", string(t)
+  Assert t[0][0][7] ==# "`" && t[0][0][11:12] ==# "\\n", string(t)
+Execute (tokens: VISUAL keeps default, transform form drops it):
+  let t = snippetary#parse#tokens("${VISUAL} ${VISUAL:txt} ${VISUAL:a/b}")
+  Assert t[0][0][0] ==# 'v' && t[0][0][1] == ''
+  Assert t[0][2][0] ==# 'v' && t[0][2][1] == 'txt', string(t)
+  Assert t[0][4][0] ==# 'v' && t[0][4][1] == 'a', string(t)
+Execute (file headers: quoted trigger, desc, options, priority, extends):
+  let lines = [ 'priority -25', 'extends vim,ruby', 'clearsnippets', 'snippet "multi word" "a desc" w', 'body line', 'endsnippet', 'global !p', 'x = 1', 'endglobal' ]
+  let info = snippetary#parse#snippets_file(lines)
+  Assert len(info.snips) == 1, 'snips=' . string(info.snips)
+  let s1 = info.snips[0]
+  Assert s1.trig == 'multi word' && s1.desc == 'a desc'
+  Assert s1.opts == 'w' && s1.pri == -25
+  Assert s1.body == "body line"
+  Assert len(info.extends) == 2, string(info.extends)
+Execute (unquoted single-word trigger with priority applied from line):
+  let lines = [ 'priority 10', 'snippet x', 'x body', 'endsnippet', 'priority 0', 'snippet y', 'y body', 'endsnippet' ]
+  let info = snippetary#parse#snippets_file(lines)
+  Assert len(info.snips) == 2
+  Assert info.snips[0].pri == 10 && info.snips[1].pri == 0
+Execute (global block skipped):
+  let lines = [ 'global', 'def p():', 'endglobal', 'snippet g', 'after', 'endsnippet' ]
+  let info = snippetary#parse#snippets_file(lines)
+  Assert len(info.snips) == 1 && info.snips[0].body == 'after'
+Execute (clearsnippets and context ignored without errors):
+  let lines = [ 'snippet q', 'ok', 'endsnippet', 'context "x"', 'pre_expand x' ]
+  let info = snippetary#parse#snippets_file(lines)
+  Assert len(info.snips) == 1, string(info.snips)

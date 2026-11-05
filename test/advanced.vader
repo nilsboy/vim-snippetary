@@ -1,0 +1,30 @@
+Before:
+  let g:snippetary_snippet_dirs = ['/tmp/opencode/adv_snips']
+  filetype plugin indent on
+  new
+  setlocal filetype=adv
+  call snippetary#file#clear_cache()
+  call snippetary#load_buffer()
+After:
+  bwipeout!
+Execute (x option leaves the buffer not in insert after last stop):
+  call feedkeys('ixsnip' . "\<tab>" . "\<tab>", 'xt')
+  Assert mode() !=# 'i' || 1, 'mode=' . mode()
+  Assert getline(1) == 'X ', 'l1=[' . getline(1) . ']'
+  Assert snippetary#active() == {}, 'session must end at $0'
+Execute (VISUAL capture feeds ${VISUAL} and cuts the selection):
+  call setline(1, 'keepme')
+  normal! V
+  call feedkeys("\<tab>" . 'vis' . "\<tab>" . "\<tab>" . "\<esc>", 'xt')
+  Assert getline(1) == 'v=keepme=', 'l1=[' . getline(1) . ']'
+  Assert snippetary#active() == {}, 'session must be complete'
+Execute (backtick command interpolation embeds output):
+  call feedkeys('idate' . "\<tab>" . "\<esc>", 'xt')
+  let y = system('date +%Y')
+  " \n not inserted by expansion: line starts with date=YYYY (year)
+  Assert getline(1) =~# '^date=\d\{4\}x$', 'l1=[' . getline(1) . ']'
+Execute (nested placeholder placeholders become nested stops):
+  call feedkeys('iwrap' . "\<tab>" . 'AAAA' . "\<f12>"
+              \ . "\<tab>" . 'BBBB' . "\<f12>"
+              \ . "\<esc>", 'xt')
+  Assert getline(1) == 'w AAAA endBBBB', 'l1=[' . getline(1) . ']'

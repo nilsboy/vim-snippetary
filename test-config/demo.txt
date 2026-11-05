@@ -1,0 +1,4 @@
+scratch buffer for manual snippetary testing.
+
+type "hello" and press <tab>, "date" and <tab>, or select text in
+visual mode, press <tab>, then type "wrap" and <tab> again.
