@@ -13,11 +13,12 @@ it also runs in minimal builds.
 SETUP                                     *snippetary-setup*
 
 The plugin loads itself on startup. Snippet files are looked up in the
-directories listed in |g:snippetary_snippet_dirs| (default:
-['UltiSnips'], or g:UltiSnipsSnippetDirectories when defined). Files
-inside those directories are recognized as `ft.snippets`,
-`ft_*.snippets`, `ft/*.snippets`, and `_.snippets` (applies to all
-filetypes). `extends` chains are followed.
+directories listed in |g:snippetary_snippet_dirs| (default: ['UltiSnips'],
+or g:UltiSnipsSnippetDirectories when defined). Files inside those
+directories are recognized as `ft.snippets`, `ft_*.snippets`,
+`ft/*.snippets`, and the all-filetypes scope `_.snippets` (also honored
+under its legacy names `all.snippets`, `all_*.snippets` and `all/`; the
+native `_.snippets` wins when both exist). `extends` chains are followed.
 
 While a `*.snippets` file is loaded its filetype is set to `snippets`
 with matching syntax support if available.
@@ -49,8 +50,13 @@ for <tab>/<s-tab>:
 Snippet-file syntax                       *snippetary-syntax*
 
     snippet trigger ["description" ["options"]]
-      lines of body, with indented lines kept
+      lines of body, with leading tabs and indented lines kept
     endsnippet
+
+Block ends (`endsnippet`, `endglobal`) and directives may be written
+with leading indentation (UltiSnips `line.strip()` semantics); body
+lines keep their raw indentation as literal text. UltiSnips-format
+only, no snippet inheritance from SnipMate.
 
 Options understood: w (word boundary), i (in-word match),
 b (only whitespace may precede the trigger), m (strip trailing
@@ -58,7 +64,7 @@ whitespace), t (keep literal tabs), x (exit insert after the last
 tabstop). `r`/`e` snippets must be skipped for now.
 
 Directives: priority N, extends ft[,ft...], global ... endglobal
-(python content is skipped with a warning), clearsnippets, context.
+(python content is skipped silently), clearsnippets, context.
 
 Escapes follow UltiSnips: backslash escapes { } $ and backtick; $$ is
 an escape for a literal dollar.
@@ -68,6 +74,31 @@ COMMANDS                                  *snippetary-commands*
 :SnippetaryReload   reread snippet files and reset sessions
 :SnippetaryClean    end all snippet sessions in the current buffer
 :SnippetaryVersion  print the version
+:SnippetaryEdit [scope]
+                    open the snippet file of {scope} (default: the first
+                    filetype of the buffer; '_' = all filetypes). The first
+                    existing file found in |g:snippetary_snippet_dirs| is
+                    opened, otherwise the file is placed (and created on
+                    write) in the first directory.
+:SnippetaryEditGlobal
+                    open the all-filetypes snippet file.
+
+Editing snippet files triggers a reload on write. Normal-mode helper:
+snippetary#goto_definition() opens the file defining the snippet for the
+keyword under the cursor (the last word before the cursor when the
+cursor is not on a keyword; the text before the cursor is still probed
+for multi-word triggers) and places the cursor on the `snippet` header
+line; without a match it falls back to |SnippetaryEdit|.
+
+COC-ULTISNIPS                            *snippetary-coc*
+
+autoload/UltiSnips.vim provides UltiSnips-API shims
+(UltiSnips#SnippetsInCurrentScope, UltiSnips#ExpandSnippet) backed by
+snippetary, and the plugin announces g:did_plugin_ultisnips (only when
+the real UltiSnips has not). The coc-ultisnips extension then serves
+the buffer's triggers inside the coc completion popup (merged with the
+language-server items) and expanding an accepted snippet runs through
+snippetary. When the real UltiSnips is re-enabled, remove the shim file.
 
 LIMITATIONS                              *snippetary-limitations*
 

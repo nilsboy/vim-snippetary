@@ -5,7 +5,7 @@ if exists('g:loaded_snippetary') || &cp
     finish
 endif
 let g:loaded_snippetary = 1
-let g:snippetary_version = '1.0.2'
+let g:snippetary_version = '1.2.2'
 
 let s:save_cpo = &cpo
 set cpo&vim
@@ -19,6 +19,12 @@ if !exists('g:snippetary_expand_trigger')
 endif
 if !exists('g:snippetary_jump_backward_trigger')
     let g:snippetary_jump_backward_trigger = '<s-tab>'
+endif
+
+" coc-ultisnips compat: announce an UltiSnips-style API is available
+" (shims in autoload/UltiSnips.vim) unless the real UltiSnips announced.
+if !exists('g:did_plugin_ultisnips')
+    let g:did_plugin_ultisnips = 1
 endif
 
 " =============== plug maps ===============
@@ -51,6 +57,8 @@ command! -nargs=0 SnippetaryReload call snippetary#reload()
 command! -nargs=0 SnippetaryClean call snippetary#clean_current_buffer()
 command! -nargs=0 SnippetaryVersion
             \ echo 'snippetary version ' . g:snippetary_version
+command! -nargs=? SnippetaryEdit call snippetary#edit(<q-args>)
+command! -nargs=0 SnippetaryEditGlobal call snippetary#edit_global()
 
 " =============== autocommands ===============
 
@@ -60,6 +68,10 @@ augroup snippetary
     autocmd CursorMoved,CursorMovedI * call snippetary#cursor_update()
     autocmd BufUnload *
                 \ if exists('b:snippetary') | unlet b:snippetary | endif
+    
+    " reparse snippet files after editing them (the parse cache works on
+    " mtimes and only helps while nothing changes)
+    autocmd BufWritePost *.snippets,*.snippet call snippetary#reload()
 augroup END
 
 " Basic settings for editing snippet files themselves.

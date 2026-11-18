@@ -1,0 +1,164 @@
+Before:
+  let g:edit_dir = '/tmp/snippetary_vader_edit'
+  let g:edit_snips = g:edit_dir . '/UltiSnips'
+  silent! call mkdir(g:edit_snips, 'p')
+  " two vim-scoped snippets; the 'sec' header lands on line 6 of the file
+  call writefile(['priority 5', 'snippet hdr "first"', '  body1', 'endsnippet', '', 'snippet sec', '  body2', 'endsnippet'], g:edit_snips . '/vim.snippets')
+  " both global conventions
+  call writefile(['snippet globtrig', '  G', 'endsnippet'], g:edit_snips . '/all.snippets')
+  call writefile(['snippet alltrig', '  A', 'endsnippet'], g:edit_snips . '/_.snippets')
+  let g:snippetary_snippet_dirs = [g:edit_snips]
+  filetype plugin indent on
+
+After:
+  bwipeout!
+
+Execute (the '_'-scope globs do not duplicate files):
+  let files = snippetary#file#for_scope('_')
+  Assert len(files) == 2, 'files: ' . string(files)
+  Assert len(filter(copy(files), 'v:val =~# "/_.snippets$"')) == 1, 'duplicate _.snippets'
+  Assert len(snippetary#file#for_scope('vim')) == 1, ''
+
+Execute (edit_target prefers the native global over the alias):
+  Assert snippetary#file#edit_target('_') =~# "/_.snippets$", snippetary#file#edit_target('_')
+
+Execute (editing a scope opens the existing file):
+  enew
+  call snippetary#edit('vim')
+  Assert matchstr(bufname('%'), 'vim\.snippets$') !=# '', bufname('%')
+
+Execute (editing a missing scope targets the primary directory):
+  enew
+  call snippetary#edit('perl')
+  Assert bufname('%') ==# g:edit_snips . '/perl.snippets', bufname('%')
+
+Execute (EditGlobal opens the native global, then the all.snippets alias):
+  enew
+  call snippetary#edit_global()
+  Assert matchstr(bufname('%'), '/_.snippets$') !=# '', bufname('%')
+  silent! call delete(g:edit_snips . '/_.snippets')
+  call snippetary#edit_global()
+  Assert matchstr(bufname('%'), '/all\.snippets$') !=# '', bufname('%')
+
+Execute (goto_definition opens the scope file at the header line):
+  enew
+  call setline(1, 'x sec')
+  setlocal filetype=vim
+  call cursor(1, 5)
+  call snippetary#goto_definition()
+  Assert matchstr(bufname('%'), 'vim\.snippets$') !=# '', bufname('%')
+  Assert line('.') == 6, 'goto line: ' . line('.')
+  bwipeout!
+
+Execute (goto_definition follows a trigger defined in all.snippets):
+  enew
+  call setline(1, 'globtrig')
+  setlocal filetype=vim
+  call cursor(1, 8)
+  call snippetary#goto_definition()
+  Assert matchstr(bufname('%'), '/all\.snippets$') !=# '', bufname('%')
+  Assert line('.') == 1, 'goto line: ' . line('.')
+  bwipeout!
+
+Execute (goto_definition uses the word under the cursor (mid-word)):
+  enew
+  call setline(1, 'x sec')
+  setlocal filetype=vim
+  call cursor(1, 4)
+  call snippetary#goto_definition()
+  Assert matchstr(bufname('%'), 'vim\.snippets$') !=# '', bufname('%')
+  Assert line('.') == 6, 'goto line: ' . line('.')
+  bwipeout!
+
+Execute (goto_definition uses the word behind the cursor):
+  enew
+  call setline(1, 'x sec -')
+  setlocal filetype=vim
+  call cursor(1, 6)
+  call snippetary#goto_definition()
+  Assert matchstr(bufname('%'), 'vim\.snippets$') !=# '', bufname('%')
+  Assert line('.') == 6, 'goto line: ' . line('.')
+  bwipeout!
+
+Execute (goto_definition falls back to the scope file without a match):
+  enew
+  call setline(1, 'x nomatchhere')
+  setlocal filetype=vim
+  call cursor(1, 13)
+  call snippetary#goto_definition()
+  Assert matchstr(bufname('%'), 'vim\.snippets$') !=# '', bufname('%')
+  Assert line('.') == 1, 'goto line: ' . line('.')
+  bwipeout!
+
+Execute (an indented endsnippet closes the snippet like UltiSnips):
+  let lines = ['', 'snippet t', '  body1', '    body2', '  endsnippet', '']
+  let info = snippetary#parse#snippets_file(lines)
+  Assert len(info.snips) == 1, string(info.snips)
+  Assert info.snips[0].body ==# "  body1\n    body2",
+        \ 'body: ' . string(info.snips[0].body)
+
+Execute (an indented endglobal and directives are honored):
+  let lines = ['  extends css', 'snippet t', 'x', '  endsnippet']
+  let info = snippetary#parse#snippets_file(lines)
+  Assert info.extends ==# ['css'], string(info.extends)
+
+Execute (the indented if snippet expands with one line between the braces):
+  call writefile(['snippet if "if" ', '  if($1) {', '    ${VISUAL}$0        ', '  }', '  endsnippet'], g:edit_snips . '/jsp.snippets')
+  call snippetary#file#clear_cache()
+  enew
+  setlocal filetype=jsp
+  call feedkeys('iif' . "\<tab>" . "\<esc>", 'xt')
+  Assert line('$') == 3, 'lines: ' . string(getline(1, line('$')))
+  Assert getline(1) ==# '  if() {', 'l1=[' . getline(1) . ']'
+  Assert getline(2) ==# '            ', 'l2=[' . getline(2) . ']'
+  Assert getline(3) ==# '  }', 'l3=[' . getline(3) . ']'
+  bwipeout!
+
+Execute (UltiSnips#SnippetsInCurrentScope returns the shim data):
+  enew
+  setlocal filetype=vim
+  let out = UltiSnips#SnippetsInCurrentScope()
+  Assert type(out) ==# type([]) && len(out) == 4, string(out)
+  Assert out[0]['key'] ==# 'alltrig', 'order: ' . string(map(copy(out), {_, v -> v['key']}))
+  Assert out[1]['key'] ==# 'globtrig', 'order: ' . string(map(copy(out), {_, v -> v['key']}))
+  Assert out[2]['key'] ==# 'hdr' && out[2]['description'] ==# 'first', string(out[2])
+  Assert out[3]['key'] ==# 'sec', 'order: ' . string(map(copy(out), {_, v -> v['key']}))
+
+Execute (UltiSnips#ExpandSnippet expands like the Plug):
+  enew
+  setlocal filetype=vim
+  call setline(1, 'x sec')
+  normal! $
+  call feedkeys("A\<C-o>:call UltiSnips#ExpandSnippet()\<CR>", 'xt')
+  Assert getline(1) ==# 'x   body2', 'l1=[' . getline(1) . ']'
+  bwipeout!
+
+Execute (multi-line expansion mid-buffer keeps following lines below):
+  call writefile(['snippet if', 'if($1) {', '  $0', '}'], g:edit_snips . '/mif.snippets')
+  call snippetary#file#clear_cache()
+  enew
+  setlocal filetype=mif
+  call setline(1, ["if", 'a', 'b'])
+  call cursor(1, 3)
+  call feedkeys("A\<tab>", 'xt')
+  Assert line('$') == 5, 'lines: ' . string(getline(1, line('$')))
+  Assert getline(1) ==# 'if() {', 'l1=[' . getline(1) . ']'
+  Assert getline(2) ==# '  ', 'l2=[' . getline(2) . ']'
+  Assert getline(3) ==# '}', 'l3=[' . getline(3) . ']'
+  Assert getline(4) ==# 'a', 'l4=[' . getline(4) . ']'
+  Assert getline(5) ==# 'b', 'l5=[' . getline(5) . ']'
+  bwipeout!
+
+Execute (two-line body mid-buffer lands before the following line):
+  call writefile(['snippet two', 'A1', '$0'], g:edit_snips . '/two.snippets')
+  call snippetary#file#clear_cache()
+  enew
+  setlocal filetype=two
+  call setline(1, ['two', 'rest'])
+  call cursor(1, 4)
+  call feedkeys("A\<tab>", 'xt')
+  Assert line('$') == 3, 'lines: ' . string(getline(1, line('$')))
+  Assert getline(1) ==# 'A1', 'l1=[' . getline(1) . ']'
+  Assert getline(2) ==# '', 'l2=[' . getline(2) . ']'
+  Assert getline(3) ==# 'rest', 'l3=[' . getline(3) . ']'
+  bwipeout!

@@ -113,7 +113,7 @@ length.
     ['v', str]     VISUAL placeholder (resolved to static text at expand)
     ['S', cmd]     shell code (system(), trailing newline chomped)
     ['V', expr]    viml code evaluated at expand
-    ['P']          python interpolation -> blank + one warning
+    ['P']          python interpolation -> blank (no warning)
 
 Expansion algorithm (snippetary#do_expand, inside <C-R>=):
 1. lnum/c/line; indent = leading whitespace of the line; matched = trigger
@@ -250,5 +250,5 @@ Harness facts (headless nvim 0.9.5):
 - Start: nvim -u test-config/init.vim test-config/demo.txt
 - Verified headless: hello expansion ('Hello from snippetary x!'), date
   backtick (YYYY-MM-DD), visual grab + 'wrap' expansion ('> text <'),
-  each ending with session complete. Python-block warning shows once per
-  load as expected (graceful degradation).
+  each ending with session complete. (The python-block warning existed
+  in 1.0.x and was removed in 1.1.1: python is skipped silently.)

@@ -47,3 +47,36 @@ AGENT LIMITATION REPORT: this session's reasoning degenerated into repeated symb
 [2026-11-03 02:23:48 POST exit=0] FINAL: hello="Hello from snippetary x!" year=1 wrap="> some text here <" all done=1; tmp/ gitignored
 [2026-11-03 02:24 POST exit=0] version 1.0.2; README/NOTES updated
 [2026-11-03 02:24 POST exit=0] wrap check clean (80-col)
+
+[2026-11-03 04:10 PRE] feat(edit): parse 'head' line numbers, for_scope all.snippets alias + dedupe, file#edit_target/fallback_dir/open_at, engine edit/edit_global/goto_definition, plugin commands + BufWritePost reload, version 1.1.0
+[2026-11-03 04:10 POST exit=0] plugin/autoload updates applied
+[2026-11-03 04:12 PRE] tests: test/vimrc made portable; new test/edit.vader (8 cases); full vader run (7 suites, headless)
+[2026-11-03 04:13 PRE exit=1] first run: 29/35 - old-suite fixtures missing in fresh env; reconstructed /tmp/opencode/{vader,jump,match,adv,corpus}_snips from suite expectations + honza/vim-snippets clone for corpus; patched vader workbench E86 (nvim 0.12 After-bwipeout interaction) in /tmp/opencode/vader.vim
+[2026-11-03 04:16 PRE] rerun full suite
+[2026-11-03 04:17 POST exit=0] FULL SUITE 35/35 cases, 64/64 assertions ALL GREEN
+[2026-11-03 04:18 PRE] docs: README, doc/snippetary.txt (all.snippets alias + new commands), TODO check, logs; helptags
+[2026-11-03 04:19 POST exit=0] docs updated, tags regenerated, wrap check clean (80-col)
+
+[2026-11-03 04:25 PRE] feat(quiet): remove python-skip warnings (file#read python echom block, engine s:warn_python + call site, dead 'pywarn' session key), version 1.1.1, docs/TODO/log updates
+[2026-11-03 04:26 PRE] verify: full suite rerun + real-config startup message check
+[2026-11-03 04:27 POST exit=0] no python warnings anywhere; suite green (35/35 cases, 64/64 assertions)
+
+[2026-11-03 04:35 PRE] feat(goto): goto_definition word-under/behind-the-cursor selection + legacy probes, version 1.1.2, 2 new edit.vader cases, docs/TODO/log updates
+[2026-11-03 04:36 PRE] verify: full suite + real-config mid-word goto check
+[2026-11-03 04:38 POST exit=0] suite green (37/37 cases, 68/68 assertions); real-config mid-word goto ('path' cursor mid-word) opens all.snippets at the 'snippet path' header line
+
+[2026-11-03 04:45 PRE] bugfix(parse): block ends + directives tolerate leading indentation (s:strip both-ends, UltiSnips line.strip()); version 1.1.3; +3 edit.vader cases incl. expansion of the indented if snippet
+[2026-11-03 04:46 PRE] verified: indented '  endsnippet' no longer swallowed (body = indented body lines only; expansion = exactly 3 lines, one body line between the braces)
+[2026-11-03 04:47 POST exit=0] full suite green (40/40 cases, 75/75 assertions)
+
+[2026-11-03 05:05 PRE] feat(coc): UltiSnips-API shims in autoload/UltiSnips.vim backed by snippetary (SnippetsInCurrentScope/ExpandSnippet), g:did_plugin_ultisnips announce, version 1.2.0, +2 edit.vader cases, docs/logs
+[2026-11-03 05:07 PRE] verify: full suite + real-config shim check (flag, js trigger count, expansion through shim)
+[2026-11-03 05:10 POST exit=0] full suite green (42/42 cases, 79/79 assertions); real config: shim serves 284 js triggers, expands 'x if' -> if(){} block with typed condition
+
+[2026-11-03 05:25 PRE] fix(coc): UltiSnips#SnippetsInCurrentScope returns sorted list of {key,description} (dict serialization order was hash-based), version 1.2.1, shim test case updated
+[2026-11-03 05:26 PRE] verify: full suite + real-config sorted order check
+[2026-11-03 05:27 POST exit=0] full suite green (42/42 cases, 81/81 assertions); real-config order check: case-insensitive alpha sorted (first '(-|=>)+', last '||=', no mismatches over 284 js triggers)
+
+[2026-11-03 05:40 PRE] bugfix(splice): do_expand tail append moved one line too low when the buffer continued below the trigger; unconditional append(lnum + len(nl) - 2), version 1.2.2, +2 edit.vader cases
+[2026-11-03 05:42 PRE] verify: full suite + real-config expansion with following lines
+[2026-11-03 05:44 POST exit=0] full suite green (44/44 cases, 91/91 assertions); real config: if/a/b expands to if() {}, blank, }, a, b

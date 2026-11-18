@@ -294,22 +294,30 @@ func! snippetary#parse#snippets_file(lines) abort
     let desc = ''
     let opts = ''
     let body = []
+    " line counter and the header line (1-based) of the current snippet,
+    " needed to jump to snippet definitions
+    let lnum = 0
+    let sniphead = 0
     for raw in a:lines
-        let first = s:rstrip(raw)
+        let lnum += 1
+        " block ends and directives tolerate leading indentation like
+        " UltiSnips (line.strip()); body lines keep their raw indentation
+        let first = s:strip(raw)
         let head = matchstr(first, '^\S\+')
         let tail = first[len(head) :]
         if in_snip
-            if s:rstrip(raw) ==# 'endsnippet'
+            if s:strip(raw) ==# 'endsnippet'
                 call add(info.snips, {
                             \ 'trig': trig, 'desc': desc, 'opts': opts,
-                            \ 'pri': pri, 'body': join(body, "\n")})
+                            \ 'pri': pri, 'head': sniphead,
+                            \ 'body': join(body, "\n")})
                 let in_snip = 0
             else
                 call add(body, raw)
             endif
             continue
         elseif in_global
-            if s:rstrip(raw) ==# 'endglobal'
+            if s:strip(raw) ==# 'endglobal'
                 let in_global = 0
             endif
             continue
@@ -326,6 +334,7 @@ func! snippetary#parse#snippets_file(lines) abort
                 let desc = h[1]
                 let opts = h[2]
                 let body = []
+                let sniphead = lnum
                 let in_snip = 1
             endif
         elseif head ==# 'global'
@@ -352,13 +361,18 @@ func! snippetary#parse#snippets_file(lines) abort
     if in_snip
         call add(info.snips, {
                     \ 'trig': trig, 'desc': desc, 'opts': opts,
-                    \ 'pri': pri, 'body': join(body, "\n")})
+                    \ 'pri': pri, 'head': sniphead,
+                    \ 'body': join(body, "\n")})
     endif
     return info
 endf
 
 func! s:rstrip(line) abort
     return substitute(a:line, '\s\+$', '', '')
+endf
+
+func! s:strip(line) abort
+    return substitute(a:line, '^\s\+\|\s\+$', '', 'g')
 endf
 
 func! s:to_num(str) abort

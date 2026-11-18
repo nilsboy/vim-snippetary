@@ -10,7 +10,7 @@ func! snippetary#session() abort
     if !exists('b:snippetary')
         let b:snippetary = {
                     \ 'snips': {}, 'ftdone': [], 'stack': [],
-                    \ 'visual': '', 'pywarn': 0,
+                    \ 'visual': '',
                     \ 'prev_l': 0, 'prev_d': 0}
     endif
     return b:snippetary
@@ -47,7 +47,8 @@ func! snippetary#load_buffer() abort
                 endif
                 call add(st.snips[snip.trig], {
                             \ 'pri': snip.pri, 'desc': snip.desc,
-                            \ 'opts': snip.opts, 'body': snip.body})
+                            \ 'opts': snip.opts, 'body': snip.body,
+                            \ 'path': path, 'line': get(snip, 'head', 0)})
             endfor
         endfor
     endwhile
@@ -59,7 +60,7 @@ func! snippetary#reload() abort
     for b in range(1, bufnr('$'))
         if buflisted(b) && bufexists(b)
             call setbufvar(b, 'snippetary', {'snips': {}, 'ftdone': [],
-                        \ 'stack': [], 'visual': '', 'pywarn': 0,
+                        \ 'stack': [], 'visual': '',
                         \ 'prev_l': 0, 'prev_c': 0, 'prev_d': 0})
         endif
     endfor
@@ -71,6 +72,54 @@ func! snippetary#clean_current_buffer() abort
     while !empty(st.stack)
         call remove(st.stack, -1)
     endwhile
+endf
+
+" =============== editing snippet files ===============
+
+" The user-facing filetype scopes: the dotted pieces of &filetype (the
+" engine-internal '_' all-filetypes scope is not part of this).
+func! snippetary#user_scopes() abort
+    return filter(copy(split(&filetype, '\.')), 'v:val !=# ""')
+endf
+
+" Open the snippet file for one scope; the file is created in the first
+" configured snippet directory when it does not exist. An empty scope
+" selects the first filetype scope (or the all-filetypes one).
+func! snippetary#edit(scope) abort
+    let scope = a:scope ==# '' ? get(snippetary#user_scopes(), 0, '_') : a:scope
+    execute 'edit ' . fnameescape(snippetary#file#edit_target(scope))
+endf
+
+" Open the all-filetypes snippet file.
+func! snippetary#edit_global() abort
+    call snippetary#edit('_')
+endf
+
+" Jump to the file and header line of the snippet expanding around the
+" cursor: the keyword under the cursor, else the last word behind the
+" cursor position; falls back to the legacy before-cursor text probes and,
+" on no match, to opening the buffer's filetype snippet file.
+func! snippetary#goto_definition() abort
+    let line = getline('.')
+    let c = col('.')
+    let word = ''
+    if strpart(line, c - 1, 1) =~# '\k'
+        " keyword run through the cursor char (stitched from both sides)
+        let word = matchstr(strpart(line, 0, c - 1), '\k*$')
+                    \ . matchstr(strpart(line, c - 1), '^\k*')
+    endif
+    if word ==# ''
+        let word = snippetary#words_for_line(1, strpart(line, 0, c - 1))
+    endif
+    for before in [word, line[: col('.') - 1], line[: col('.') - 2]]
+        let snip = snippetary#snip_at(before)[1]
+        if !empty(snip) && get(snip, 'path', '') !=# ''
+                    \ && get(snip, 'line', 0) > 0
+            call snippetary#file#open_at(snip.path, snip.line)
+            return
+        endif
+    endfor
+    call snippetary#edit(get(snippetary#user_scopes(), 0, '_'))
 endf
 
 " =============== trigger matching ===============
@@ -226,11 +275,11 @@ func! snippetary#do_expand(snip, matched) abort
         if len(nl) > 2
             call append(lnum, nl[1 : -2])
         endif
-        if lnum + len(nl) - 1 > line('$')
-            call append('$', nl[-1] . after)
-        else
-            call append(lnum + len(nl) - 1, nl[-1] . after)
-        endif
+        " the last body line lands right below the second-to-last one; at
+        " this point line('$') already contains the (len(nl) - 2) lines
+        " appended above, so comparing against it moved this line one too
+        " low whenever the buffer continued below the trigger
+        call append(lnum + len(nl) - 2, nl[-1] . after)
     endif
 
     let exp = {'stops': built.stops, 'no': 0, 'opts': a:snip.opts}
@@ -648,15 +697,6 @@ func! s:shell_out(cmd) abort
     return substitute(system(a:cmd), '[\r\n]\+$', '', '')
 endf
 
-func! s:warn_python(st) abort
-    if !a:st.pywarn
-        let a:st.pywarn = 1
-        echohl WarningMsg
-        echom 'snippetary: python interpolation not supported (blank)'
-        echohl None
-    endif
-endf
-
 func! s:wnode(r, node) abort
     if type(a:node) == type('')
         call s:emit(a:r, a:node)
@@ -670,7 +710,7 @@ func! s:wnode(r, node) abort
     elseif kind ==# 'V'
         call s:emit(a:r, string(eval(a:node[1])))
     elseif kind ==# 'P'
-        call s:warn_python(a:r.st)
+        " python interpolation: skipped (blank)
     elseif kind ==# 'v'
         let st = a:r.st
         call s:emit(a:r, get(st, 'visual', '') !=# '' ? st.visual : a:node[1])

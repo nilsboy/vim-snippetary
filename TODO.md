@@ -1,3 +1,14 @@
+- [x] add SnippetaryEdit/SnippetaryEditGlobal commands, a goto_definition
+      helper and the all.snippets all-filetypes alias
+- [x] drop the python-skip warnings (file load and expand time)
+- [x] goto_definition: word under the cursor, else the word behind it
+- [x] block ends and directives tolerate leading indentation
+      (endsnippet/endglobal/extends/priority written indented)
+- [x] coc-ultisnips integration: UltiSnips-API shims backed by snippetary
+      (popup triggers via coc, expansion stays snippetary)
+- [x] coc popup: snippet items arrive in a stable alphabetical order
+- [x] splice: multi-line expansion keeps lines below the trigger below
+      the snippet (tail-append off-by-one)
 - [x] create a classic vimscript snippets plugin that works with ultisnips
       snippets
 - [x] test everything with vader

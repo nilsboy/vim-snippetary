@@ -79,3 +79,114 @@ verification via probes/tests.
   tabstop with defaults destroys nested stops; jumping past last tabstop ends
   session; final <tab> on dead session inserts a literal tab.
 - Full suite now 27/27 cases, 50/50 assertions; version bumped to 1.0.1.
+
+## 2026-11-03 edit/goto feature + all.snippets alias (v1.1.0)
+
+- New: :SnippetaryEdit [scope], :SnippetaryEditGlobal and normal-mode
+  snippetary#goto_definition() (jump to the defining file's `snippet`
+  header line, fallback to the scope's file). parse#snippets_file now
+  records the 1-based header line per snippet ('head'); load_buffer keeps
+  'path'/'line' per merged trigger. A BufWritePost hook re-parses on
+  .snippets/.snippet saves.
+- for_scope('_') now also matches all.snippets / all_*.snippets / all/
+  (legacy UltiSnips naming), and all results are deduped (the '_*.snippets'
+  glob used to match _.snippets twice). edit_target returns the first
+  existing file for the scope or a creation path in the first configured
+  directory (fallback base = first runtimepath entry for unresolved
+  relative dir names).
+- test/vimrc made portable: runtimepath root derived from <script>, vader
+  dir resolved from $SNIPPETARY_TEST_VADER, then /tmp/opencode/vader.vim,
+  then the user config checkout.
+- New suite test/edit.vader (8 cases): covers dedupe, native-over-alias
+  edit order, open-existing vs create-in-primary-dir, EditGlobal with both
+  conventions, goto to ft/all.snippets files line-accurate, and the
+  no-match file fallback.
+- Harness note (nvim 0.12.6): a test After block running `bwipeout!` fully
+  unloads the vader workbench buffer; the next case then fails with E86 in
+  vader#window#prepare. The vader copy at /tmp/opencode/vader.vim is
+  patched in s:switch_to_workbench to recreate a vanished workbench buffer
+  instead of raising E86. Same patch should be re-applied when the vader
+  checkout is refreshed; nvim 0.9.5 is not affected either way.
+- Old-suite external fixtures (/tmp/opencode/{vader,jump,match,adv,
+  corpus}_snips) were missing in the fresh environment and have been
+  reconstructed from the suite expectations; the corpus dir gets the
+  UltiSnips/*.snippets files of a honza/vim-snippets clone. Full suite:
+  35/35 cases, 64/64 assertions, version 1.1.0.
+
+## 2026-11-03 warnings removed (v1.1.1)
+
+- Per request, python-skip notices are gone entirely: file#read no longer
+  echoms the load-time warning, the engine's s:warn_python (expand-time,
+  session-flagged) is deleted along with the now-dead 'pywarn' session
+  key. Python content still degrades silently (blank/omitted).
+- Docs adjusted (README limitation bullet, doc syntax section, NOTES
+  addendum); version 1.1.1.
+
+## 2026-11-03 goto uses the cursor word (v1.1.2)
+
+- goto_definition now picks the KEYWORD UNDER THE CURSOR (run stitched
+  from both sides of the cursor char; byte-col slicing stays on char
+  boundaries, multibyte-safe); when the cursor is not on a keyword it
+  uses the last word behind the cursor (words_for_line over the text up
+  to the cursor position - same expression works for insert-mode
+  positions).
+- The old raw-text probes are kept as tertiary candidates so multi-word
+  triggers still jump when the cursor sits at their end. Match order:
+  cursor word -> behind word -> text before cursor (inclusive) -> text
+  before cursor (exclusive) -> file-level fallback.
+- test/edit.vader: +2 cases (mid-word 'x sec' cursor on 's' opens the
+  definition header line, non-keyword cursor '-' falls through to the
+  word behind).
+
+## 2026-11-03 indented block ends (v1.1.3)
+
+- Bugfix: `endsnippet` / `endglobal` with leading indentation and
+  directives written indented were not recognized: the trailing-only
+  rstrip compare swallowed `  endsnippet` into the body, so such snippets
+  expanded one extra body line. parse#snippets_file now strips both ends
+  for block ends (UltiSnips line.strip() semantics) and derives directive
+  heads from the stripped line; body lines keep their raw indentation.
+- test/edit.vader: +3 cases (indented endsnippet body, indented endglobal
+  + extends, full expansion of the user's space-indented if snippet with
+  ${VISUAL}$0 -> exactly 3 lines, one body line between the braces).
+
+## 2026-11-03 coc-ultisnips via UltiSnips shims (v1.2.0)
+
+- autoload/UltiSnips.vim: shims so the installed coc-ultisnips extension
+  uses snippetary as its engine: SnippetsInCurrentScope returns the
+  merged buffer triggers ({trigger: description} dict form the extension
+  accepts) incl. the all-filetypes scope; ExpandSnippet feeds the
+  existing <Plug>(snippetary-next-or-trigger) to expand the trigger the
+  popup accepted. plugin/snippetary.vim announces
+  g:did_plugin_ultisnips = 1 only when the real UltiSnips has not. Drop
+  the shim file when re-enabling real UltiSnips (note in the file).
+- coc popup now contains snippet triggers merged with language-server
+  items; accepting expands via snippetary mirrors/${VISUAL}; the typed
+  trigger <tab> flow is unchanged.
+- test/edit.vader: +2 cases (shim data incl. descriptions and the '_'
+  scope; expansion through the shim from an insert accept position).
+  Full suite: 42/42 cases, 79/79 assertions. Version 1.2.0.
+
+## 2026-11-03 splice off-by-one mid-buffer (v1.2.2)
+
+- Bugfix: expanding a multi-line body with content BELOW the trigger line
+  misplaced the last body line one line too low (append used
+  `lnum + len(nl) - 1` while `line('$')` already included the
+  `len(nl) - 2` lines appended just before, so the final `append()`
+  landed after the first following line instead of the snippet's last
+  body line). The tail splice is now a single unconditional
+  `append(lnum + len(nl) - 2, nl[-1] . after)` - correct mid-buffer and
+  identical to the old end-of-buffer behavior.
+- test/edit.vader: +2 cases (3-line body expanded on line 1 of
+  if/a/b -> if() {}, $0 line, }, a, b; 2-line body mid-buffer). Full
+  suite: 44/44 cases, 91/91 assertions. Version 1.2.2.
+
+## 2026-11-03 popup item order (v1.2.1)
+
+- UltiSnips#SnippetsInCurrentScope now returns a SORTED LIST of
+  {key, description} dicts instead of an unsorted dict: vim Dictionaries
+  serialize to javascript in hash-bucket order, so coc-ultisnips saw the
+  triggers unordered (its extension already accepts both shapes; the list
+  branch preserves order). Sort is alphabetical, case-insensitive.
+- test/edit.vader: shim case now asserts the exact order alltrig →
+  globtrig → hdr → sec. Version 1.2.1.
