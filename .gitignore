@@ -2,3 +2,5 @@ dist/
 tmp/
 *.swp
 doc/tags
+agent-log.md
+agent-exe-log.md

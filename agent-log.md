@@ -124,6 +124,24 @@ verification via probes/tests.
 
 ## 2026-11-03 goto uses the cursor word (v1.1.2)
 
+- [v1.2.3/1.3.0 addition] engine: expand-time t[n] context for !v —
+  b:snippetary_t holds each stop's text (presets from the token tree for
+  pending stops, rendered text for closed ones) and b:snippetary_visual
+  holds the captured ${VISUAL} text; !v string results insert raw (the
+  old string() wrapped strings in quotes - changed, matches UltiSnips).
+- [v1.3.0 addition] config: snippet_helpers.vim (vimscript ports of the
+  python helpers: SnTo*Case, SnClassName*, SnFncC, SnEnum, SnCompB,
+  SnLcFirst, SnLcCamel, SnIf, SnSecTitle, SnHtmlSlash, SnBase64Visual)
+  + vader tests (/home/ai/.config/nvim/test/); all regexes use \C and
+  explicit [A-Za-z0-9_] classes: python \w/\W semantics, immune to the
+  user's iskeyword/ignorecase settings. Notable nvim 0.12 find: the
+  old-style pattern \C\(.+)\.[^.]+$ does NOT match while its \v form
+  does — all helper regexes use \v.
+- [v1.3.0 addition] user snippets: all 11 files converted off python
+  (!p/global) onto !v helpers and enumerated w-triggers; parse sweep
+  shows zero invalid lines; expansions verified headless (js import/
+  new/class, ts class, html span./span#/form/title, vim command,
+  mongodb join, swagger verb, help sec/ssec, all toggles).
 - goto_definition now picks the KEYWORD UNDER THE CURSOR (run stitched
   from both sides of the cursor char; byte-col slicing stays on char
   boundaries, multibyte-safe); when the cursor is not on a keyword it

@@ -80,3 +80,18 @@ AGENT LIMITATION REPORT: this session's reasoning degenerated into repeated symb
 [2026-11-03 05:40 PRE] bugfix(splice): do_expand tail append moved one line too low when the buffer continued below the trigger; unconditional append(lnum + len(nl) - 2), version 1.2.2, +2 edit.vader cases
 [2026-11-03 05:42 PRE] verify: full suite + real-config expansion with following lines
 [2026-11-03 05:44 POST exit=0] full suite green (44/44 cases, 91/91 assertions); real config: if/a/b expands to if() {}, blank, }, a, b
+
+[2026-11-03 06:10 PRE] feat(t-context): b:snippetary_t (preset+rendered tabstop text) + b:snippetary_visual for !v, raw-string !v results (string() quoting removed), version 1.3.0; +2 edit.vader cases
+[2026-11-03 06:11 POST exit=0] full suite green (46/46, 93/93)
+[2026-11-03 06:15 PRE] feat(presets): token-tree t-presets for pending stops (UltiSnips t[n] semantics), re-run
+[2026-11-03 06:16 POST exit=0] full suite green (47/47 cases, 94/94 assertions); html span./span#/form/title + js/ts/help/mongo/swagger expansions verified headless against the converted user snippets
+[2026-11-03 06:20 PRE] config: snippet_helpers.vim (+tests /home/ai/.config/nvim/test/{vimrc,snippet_helpers.vader}); user snippets converted off python (11 files, enumerated toggles, !v helpers)
+[2026-11-03 06:25 POST exit=0] helper tests 13/13 (30/30); parse sweep over 37 real snippet files: zero errors; all !p gone (except commented-out lines)
+[2026-11-19 03:51 PRE] status check: run full vader suite (7 suites, headless via test/vimrc)
+[2026-11-19 03:51 POST exit=0] suite green 47/47 (94/94); status reported to user
+[2026-11-19 03:52 PRE] agents.md compliance audit: line widths of md files, gitignore state of agent logs, notes/readme currency, TODO reread, PROJECT.md/dist presence
+[2026-11-19 03:52 PRE] fix gitignore: untrack agent-log.md + agent-exe-log.md (AGENTS.md rule: gitignore both)
+[2026-11-19 03:52 POST exit=0] logs untracked + gitignored (files kept on disk)
+[2026-11-19 03:52 PRE] docs currency: help doc + README (!v context vars), fix README duplicated discovery para, append NOTES.md addendum v1.1.2-v1.3.0
+[2026-11-19 03:53 POST exit=0] docs updated: doc/snippetary.txt !v section, README !v bullet + dup para removed, NOTES.md v1.1.2-v1.3.0 addendum; no md line >80
+[2026-11-19 03:53 PRE] pre-commit sanity: full vader suite, then two commits (1 chore: gitignore agent logs + AGENTS rule text; 2 feat v1.3.0: splice fix + t-context + docs)
