@@ -9,6 +9,8 @@
 - [x] coc popup: snippet items arrive in a stable alphabetical order
 - [x] splice: multi-line expansion keeps lines below the trigger below
       the snippet (tail-append off-by-one)
+- [x] t[n] context for !v interpolations (b:snippetary_t with preset
+      defaults + rendered-so-far, b:snippetary_visual) - python t[] analog
 - [x] create a classic vimscript snippets plugin that works with ultisnips
       snippets
 - [x] test everything with vader

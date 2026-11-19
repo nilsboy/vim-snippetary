@@ -31,13 +31,9 @@ when they are written.
 
 ## Mappings
 
-Snippet files live in `g:snippetary_snippet_dirs` (see below) on the
-runtimepath: `ft.snippets`, `ft_*.snippets`, `ft/*.snippets` and the
-`_`-prefixed file applies to every filetype (its legacy `all.*` names
-are honored as well). `extends`, `priority` and quoted multi-word
-trigger headers are honored; `.snippets` files get `filetype=snippets`.
 `<Plug>(snippetary-next-or-trigger)`, `<Plug>(snippetary-back)` and
-`<Plug>(snippetary-visual)` exist for custom keys.
+`<Plug>(snippetary-visual)` exist for custom keys (all vader-tested,
+see `test/vimrc` for the default wiring).
 
 ## Commands
 
@@ -71,6 +67,11 @@ reloaded automatically after a write.
 * Jumping past the last tabstop ends the session and leaves the cursor
   at the end of the snippet.
 * Backtick shell interpolation runs the command and embeds the output.
+* `!v` interpolations run `eval()`; string results are inserted raw.
+  During expansion `b:snippetary_t` holds the tabstop texts (rendered
+  stops keep their current text, pending stops their initial default,
+  like UltiSnips t[n]) and `b:snippetary_visual` holds the visual
+  capture that `${VISUAL}` receives.
 * Python interpolation (`!p`, `global !p`) is skipped; the snippet text
   still expands.
 * Transforms and choice lists of UltiSnips degrade gracefully (transform →
@@ -91,7 +92,7 @@ re-enabled, delete the shim file so its own autoload wins.
 ## Testing
 
 The test suite uses vader.vim (see `test/`); current status
-**(44/44 cases, 91/91 assertions)** across seven suites (smoke, parse,
+**(47/47 cases, 94/94 assertions)** across seven suites (smoke, parse,
 jumps, match, corpus, advanced, edit). Headless runs cannot fire
 `CursorUpdated`-style autocmds per keystroke, so `test/vimrc` defines an
 `<f12>` hook that invokes `snippetary#cursor_update()` inside batches.

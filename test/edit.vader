@@ -162,3 +162,32 @@ Execute (two-line body mid-buffer lands before the following line):
   Assert getline(2) ==# '', 'l2=[' . getline(2) . ']'
   Assert getline(3) ==# 'rest', 'l3=[' . getline(3) . ']'
   bwipeout!
+
+Execute (b:snippetary_t exposes expand-time tabstop text to !v):
+  call writefile(['snippet tctx', '${1:foo}`!v b:snippetary_t[1]`'], g:edit_snips . '/tctx.snippets')
+  call snippetary#file#clear_cache()
+  enew
+  setlocal filetype=tctx
+  call feedkeys('itctx' . "\<tab>" . "\<esc>", 'xt')
+  Assert line('$') == 1 && getline(1) ==# 'foofoo', 'l1=[' . getline(1) . ']'
+  bwipeout!
+
+Execute (b:snippetary_t presets t[n] even BEFORE the stop renders):
+  call writefile(['snippet tpres', '`!v b:snippetary_t[1]`${1:foo}`!v b:snippetary_t[1]`'], g:edit_snips . '/tpres.snippets')
+  call snippetary#file#clear_cache()
+  enew
+  setlocal filetype=tpres
+  call feedkeys('itpres' . "\<tab>" . "\<esc>", 'xt')
+  Assert line('$') == 1 && getline(1) ==# 'foofoofoo', 'l1=[' . getline(1) . ']'
+  bwipeout!
+
+Execute (b:snippetary_visual exposes the captured selection to !v):
+  call writefile(['snippet vsn', '`!v get(b:, "snippetary_visual", "?")`'], g:edit_snips . '/vsn.snippets')
+  call snippetary#file#clear_cache()
+  enew
+  setlocal filetype=vsn
+  call setline(1, 'TEXT')
+  normal! V
+  call feedkeys("\<tab>" . 'vsn' . "\<tab>" . "\<esc>", 'xt')
+  Assert line('$') == 1 && getline(1) ==# 'TEXT', 'l1=[' . getline(1) . ']'
+  bwipeout!

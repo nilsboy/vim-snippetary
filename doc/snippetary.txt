@@ -69,6 +69,18 @@ Directives: priority N, extends ft[,ft...], global ... endglobal
 Escapes follow UltiSnips: backslash escapes { } $ and backtick; $$ is
 an escape for a literal dollar.
 
+Shell (`!v`) interpolations run `eval()` on the expression. String
+results are inserted raw, other types via string(). Two context
+variables mirror the UltiSnips python t[n] analog:
+
+- b:snippetary_t: dictionary of tabstop texts. Stops that already
+  rendered hold their current text; pending stops hold their
+  pre-rendered default text (UltiSnips t[n] semantics: t[n] holds the
+  INITIAL tabstop text even before the stop itself renders).
+- b:snippetary_visual: the text captured by the last visual selection
+  (the same text ${VISUAL} receives, \r stripped). It is set once per
+  expansion and kept until the next expansion.
+
 COMMANDS                                  *snippetary-commands*
 
 :SnippetaryReload   reread snippet files and reset sessions

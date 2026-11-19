@@ -252,3 +252,40 @@ Harness facts (headless nvim 0.9.5):
   backtick (YYYY-MM-DD), visual grab + 'wrap' expansion ('> text <'),
   each ending with session complete. (The python-block warning existed
   in 1.0.x and was removed in 1.1.1: python is skipped silently.)
+
+## Session addendum 2026-11-03/19 (v1.1.2 - v1.3.0)
+
+Engine changes, distilled (narrative in agent-log.md):
+
+- goto_definition candidate order: keyword under the cursor (stitched
+  from both cursor sides, multibyte-safe byte-col slicing) -> keyword
+  behind the cursor -> text before cursor inclusive -> exclusive ->
+  scope-file fallback. The raw probes keep multi-word triggers working
+  when the cursor sits at their end.
+- Block ends and directives (endsnippet/endglobal/extends/priority) are
+  stripped on both ends; body lines keep raw indentation. Expansion of
+  an indented-body snippet must not swallow the end line.
+- UltiSnips shims (autoload/UltiSnips.vim): SnippetsInCurrentScope
+  returns a SORTED LIST of {key,description} dicts - a dict would
+  serialize to javascript in hash-bucket order and coc-ultisnips saw
+  unordered triggers. ExpandSnippet feeds the existing <Plug> mapping.
+- Splice off-by-one (v1.2.2): with buffer content below the trigger the
+  last body line landed one line too low, because line('$') already
+  counted the lines appended for the earlier body lines. The tail splice
+  is one unconditional `append(lnum + len(nl) - 2, nl[-1] . after)`.
+- !v context (v1.3.0): b:snippetary_t merges pre-rendered placeholder
+  defaults (s:collect_default over the token tree) with the seen stops'
+  rendered text; b:snippetary_visual exposes ${VISUAL} with \r
+  stripped. String !v results insert raw; older versions string()'d
+  them, wrapping values in quotes.
+- nvim 0.12 regex find: the old-style pattern \C\(.+)\.[^.]+$ does NOT
+  match where its \v form does; helper code uses \v forms.
+
+User-config side (kept outside the repo): the 11 real snippet files are
+converted off python (!p/global) onto !v helpers; snippet_helpers.vim
+holds the vimscript ports (SnTo*Case, SnClassName*, SnFncC, SnEnum,
+SnCompB, SnLcFirst, SnLcCamel, SnIf, SnSecTitle, SnHtmlSlash,
+SnBase64Visual) with \C + explicit [A-Za-z0-9_] classes so the
+python \w/\W semantics are immune to iskeyword/ignorecase; its vader
+tests live in the user config. Parse sweep over the 37 real files:
+zero errors.

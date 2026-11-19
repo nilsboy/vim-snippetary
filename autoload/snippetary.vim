@@ -258,6 +258,8 @@ func! snippetary#do_expand(snip, matched) abort
 
     " consume ${VISUAL} once, then stop tracking
     let vis = substitute(get(st, 'visual', ''), "\r", '', 'g')
+    " expose the captured text to !v interpolations (SnBase64Visual et al)
+    let b:snippetary_visual = vis
 
     let tree = snippetary#parse#tokens(join(
                 \ snippetary#body_prep(a:snip.body, indent, a:snip.opts), "\n"))
@@ -605,11 +607,43 @@ endf
 " Rows and cols are relative to the expansion point; do_expand splices them
 " into the buffer. The open pile tracks nesting: each nested stop is recorded
 " on its parent, and closing a stop captures its rendered content so later
+" default text of one placeholder's body: literals + nested defaults
+func! s:default_text(dfl) abort
+    let out = []
+    for lin in a:dfl
+        for node in lin
+            if type(node) ==# type('')
+                call add(out, node)
+            elseif node[0] ==# 'p'
+                call add(out, s:default_text(node[2]))
+            endif
+        endfor
+    endfor
+    return join(out, '')
+endfunc
+
+" pre-render the default text of every placeholder in the token tree (the
+" t[n] presets: UltiSnips t[n] holds the INITIAL tabstop text even before
+" the stop itself renders)
+func! s:collect_default(dfl, acc) abort
+    for lin in a:dfl
+        for node in lin
+            if type(node) !=# type('') && node[0] ==# 'p'
+                let a:acc[node[1]] = s:default_text(node[2])
+            endif
+        endfor
+    endfor
+endfunc
+
 " mirrors can be emitted as copies.
 
 func! s:render(tree, snip, lnum, c, indent, st) abort
     let r = {'lines': [''], 'row': 0, 'stops': {}, 'seen': {},
-                \ 'indent': a:indent, 'st': a:st, 'open': []}
+                \ 'indent': a:indent, 'st': a:st, 'open': [], 'tdefault': {}}
+    " pre-collect the default text of every placeholder in the body (the
+    " UltiSnips t[n] semantics: t[n] holds the INITIAL tabstop text even
+    " before the stop itself renders)
+    call s:collect_default(a:tree, r.tdefault)
     call s:wdfl(r, a:tree)
     if !has_key(r.seen, 0)
         call s:stop_open(r, 0)
@@ -708,7 +742,14 @@ func! s:wnode(r, node) abort
     elseif kind ==# 'S'
         call s:emit(a:r, s:shell_out(a:node[1]))
     elseif kind ==# 'V'
-        call s:emit(a:r, string(eval(a:node[1])))
+        " expose tabstop text to !v (the t[1..9] analog of the UltiSnips
+        " python API): already-rendered stops win, pending stops get their
+        " pre-rendered default text (UltiSnips t[n] semantics)
+        let b:snippetary_t = extend(copy(get(a:r, 'tdefault', {})), copy(a:r.seen))
+        " a string result is inserted raw (UltiSnips !v semantics); non-
+        " strings go through string()
+        let rv = eval(a:node[1])
+        call s:emit(a:r, type(rv) ==# type('') ? rv : string(rv))
     elseif kind ==# 'P'
         " python interpolation: skipped (blank)
     elseif kind ==# 'v'
