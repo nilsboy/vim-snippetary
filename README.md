@@ -72,6 +72,11 @@ reloaded automatically after a write.
   stops keep their current text, pending stops their initial default,
   like UltiSnips t[n]) and `b:snippetary_visual` holds the visual
   capture that `${VISUAL}` receives.
+* Regex option (`r`) triggers are python-re matched over the text
+  before the cursor; a snippet fires on the first match that ends at
+  the cursor and only the matched span is replaced. Match groups are
+  exposed to `!v` via `b:snippetary_match` (the python
+  `match.group(n)` analog; key 0 is the whole match).
 * Python interpolation (`!p`, `global !p`) is skipped; the snippet text
   still expands.
 * Transforms and choice lists of UltiSnips degrade gracefully (transform →
@@ -92,8 +97,8 @@ re-enabled, delete the shim file so its own autoload wins.
 ## Testing
 
 The test suite uses vader.vim (see `test/`); current status
-**(47/47 cases, 94/94 assertions)** across seven suites (smoke, parse,
-jumps, match, corpus, advanced, edit). Headless runs cannot fire
+**(58/58 cases, 126/126 assertions)** across eight suites (smoke, parse,
+jumps, match, corpus, advanced, edit, regex). Headless runs cannot fire
 `CursorUpdated`-style autocmds per keystroke, so `test/vimrc` defines an
 `<f12>` hook that invokes `snippetary#cursor_update()` inside batches.
 

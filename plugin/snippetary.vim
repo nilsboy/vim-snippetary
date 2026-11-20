@@ -5,7 +5,7 @@ if exists('g:loaded_snippetary') || &cp
     finish
 endif
 let g:loaded_snippetary = 1
-let g:snippetary_version = '1.3.0'
+let g:snippetary_version = '1.4.0'
 
 let s:save_cpo = &cpo
 set cpo&vim

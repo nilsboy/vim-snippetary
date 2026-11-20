@@ -81,6 +81,35 @@ variables mirror the UltiSnips python t[n] analog:
   (the same text ${VISUAL} receives, \r stripped). It is set once per
   expansion and kept until the next expansion.
 
+REGEX TRIGGERS                                *snippetary-regex*
+
+With the 'r' option the trigger is a python-re subset regular
+expression. Matching follows the UltiSnips engine: the pattern is
+re.finditer()d over the text before the cursor (line start to
+cursor) and the snippet fires on the first match whose end equals
+the cursor position; only the matched span is removed before the
+body expands, with the option 'b' applying relative to that span.
+
+Supported grammar: literals, '.', anchors (^ $ \A \Z), word
+boundaries (\b \B), shorthand (\s \S \d \D \w \W), character
+classes with ranges, negation and shorthand inside, groups ((...),
+(?:...), (?P<name>...)), alternation, quantifiers (* + ? {m} {m,}
+{m,n} and lazy forms), lookahead ((?=...) (?!...)) and fixed-width
+lookbehind ((?<=...) (?<!...)). Inline flags: (?i) at pattern start
+and (?i:...) groups. Anything else makes the pattern fail closed
+(the snippet never matches, like the python-skip degradation; the
+last compile error is left in g:snippetary_re_error).
+
+The matches of capture groups are available to !v interpolations
+through b:snippetary_match: a dictionary with the whole match in
+key 0 and the groups in keys 1..n (groups that did not match are
+absent; the python analog is match.group(n)):
+>
+    snippet "(\\w+).par" "Parenthesis (postfix)" r
+    (`!v b:snippetary_match[1]`$1)$0
+    endsnippet
+<
+
 COMMANDS                                  *snippetary-commands*
 
 :SnippetaryReload   reread snippet files and reset sessions
@@ -116,5 +145,8 @@ LIMITATIONS                              *snippetary-limitations*
 
 Python interpolation (!p) is skipped; transforms are dropped (the
 tabstop or mirror is kept); choice lists become their first choice;
-regular-expression and eval-option triggers do not match; multi-line
-typing is tracked at the extent level only.
+the eval-option trigger ('e') does not match; regex triggers support
+the python-re subset documented in |snippetary-regex| (lookbehind
+only with fixed width; backreferences, (?x) verbose patterns and
+unsupported escapes make the snippet fail closed, never matching);
+multi-line typing is tracked at the extent level only.

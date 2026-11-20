@@ -165,35 +165,55 @@ endf
 
 " Find [trigger, snip, matched] for the text before the cursor.
 func! snippetary#snip_at(before) abort
-    let best = ['', {}, '']
+    let best = ['', {}, '', {}]
     for [trig, snips] in items(snippetary#session().snips)
-        let words = snippetary#words_for_line(
-                    \ len(snippetary#split_at_ws(trig)), a:before)
         for snip in snips
             let o = snip.opts
-            let m = 0
-            if stridx(o, 'r') >= 0 || stridx(o, 'e') >= 0
+            if stridx(o, 'e') >= 0
                 continue
             endif
-            if stridx(o, 'i') >= 0
-                let m = words =~# '\V' . escape(trig, '\."') . '\$'
-            elseif stridx(o, 'w') >= 0
-                let m = words ==# trig
-                let prefix = snippetary#leftchar(a:before, strlen(words))
-                if m && prefix !=# ''
-                    let m = snippetary#word_boundary(prefix[-1:], trig)
-                endif
+            let matched = ''
+            let groups = {}
+            if stridx(o, 'r') >= 0
+                " UltiSnips _re_match: finditer over the text, fire on the
+                " first match ending at the cursor; the matched span is
+                " replaced and its capture groups feed the !v context
+                let r = snippetary#re#matchend(
+                            \ snippetary#re#program(trig), a:before)
+                let matched = empty(r) ? '' : r.whole
+                let groups = empty(r) ? {} : r.groups
             else
-                let m = words ==# trig
-            endif
-            if m && stridx(o, 'b') >= 0
-                let before = snippetary#leftchar(a:before, strlen(words))
-                if before !=# substitute(before, '[ \t]', '', 'g')
-                    let m = 0
+                " literal triggers: compare the trailing words of before
+                let words = snippetary#words_for_line(
+                            \ len(snippetary#split_at_ws(trig)), a:before)
+                if stridx(o, 'i') >= 0
+                    if words =~# '\V' . escape(trig, '\."') . '\$'
+                        let matched = trig
+                    endif
+                elseif stridx(o, 'w') >= 0
+                    if words ==# trig
+                        let prefix = snippetary#leftchar(a:before,
+                                    \ strlen(words))
+                        if prefix ==# ''
+                                    \ || snippetary#word_boundary(prefix[-1:],
+                                    \ trig)
+                            let matched = trig
+                        endif
+                    endif
+                elseif words ==# trig
+                    let matched = trig
                 endif
             endif
-            if m && (best[0] ==# '' || snip.pri > best[1].pri)
-                let best = [trig, snip, trig]
+            if matched !=# '' && stridx(o, 'b') >= 0
+                " 'b': only whitespace may precede the matched text
+                if substitute(snippetary#leftchar(a:before, strlen(matched)),
+                            \ '[ \t]', '', 'g') !=# ''
+                    let matched = ''
+                endif
+            endif
+            if matched !=# ''
+                        \ && (best[0] ==# '' || snip.pri > best[1].pri)
+                let best = [trig, snip, matched, groups]
             endif
         endfor
     endfor
@@ -245,7 +265,7 @@ func! snippetary#body_prep(body, indent, opts) abort
 endf
 
 " Expansion handler (runs inside <C-R>= while in insert mode).
-func! snippetary#do_expand(snip, matched) abort
+func! snippetary#do_expand(snip, matched, ...) abort
     let st = snippetary#session()
     let &undolevels = &undolevels
     let lnum = line('.')
@@ -260,6 +280,10 @@ func! snippetary#do_expand(snip, matched) abort
     let vis = substitute(get(st, 'visual', ''), "\r", '', 'g')
     " expose the captured text to !v interpolations (SnBase64Visual et al)
     let b:snippetary_visual = vis
+    " regex-group context for !v (the python match.group(n) analog);
+    " literal snippets expose the trigger as the whole match
+    let b:snippetary_match = extend({'0': a:matched},
+                \ a:0 >= 1 ? a:1 : {})
 
     let tree = snippetary#parse#tokens(join(
                 \ snippetary#body_prep(a:snip.body, indent, a:snip.opts), "\n"))
@@ -574,12 +598,12 @@ func! snippetary#NextOrTrigger() abort
 endf
 
 func! snippetary#try_expand() abort
-    let [trig, snip, matched] = snippetary#snip_at(
+    let [trig, snip, matched, groups] = snippetary#snip_at(
                 \ getline('.')[: col('.') - 2])
     if empty(snip)
         return "\<tab>"
     endif
-    return snippetary#do_expand(snip, matched)
+    return snippetary#do_expand(snip, matched, groups)
 endf
 
 func! snippetary#BackwardsSnippet() abort

@@ -1,0 +1,145 @@
+" Regex ('r') snippet triggers: matcher semantics (python-re subset via
+" autoload/snippetary/re.vim, finditer + end-at-cursor like the UltiSnips
+" engine) and end-to-end expansions. Fixtures under /tmp are rebuilt like
+" in edit.vader.
+
+Before:
+  let g:regex_dir = '/tmp/snippetary_vader_regex'
+  if isdirectory(g:regex_dir)
+    call delete(g:regex_dir, 'rf')
+  endif
+  set packpath=
+  new
+  filetype plugin indent on
+After:
+  bwipeout!
+
+Execute (finditer anchoring: a match must end at the string end):
+  let m = snippetary#re#matchend(snippetary#re#program('a'), 'aa')
+  Assert !empty(m) && m.s == 1 && m.e == 2, 'g=' . string(m)
+  let m = snippetary#re#matchend(snippetary#re#program('.a'), 'aba')
+  " no match at s=0 ('.a' needs 'aa'); finditer finds 'ba' at s=1
+  Assert m.whole ==# 'ba', 'g=' . string(m)
+Execute (the user's NOTE trigger):
+  let m = snippetary#re#matchend(snippetary#re#program('.*\s*.*note'),
+        \ 'bla note')
+  Assert !empty(m) && m.whole ==# 'bla note', 'g=' . string(m)
+  let m = snippetary#re#matchend(snippetary#re#program('(.*\s*).*note'),
+        \ 'some note')
+  Assert m.groups['1'] ==# 'some ', 'g=' . string(m)
+Execute (optional groups are dropped when they did not match):
+  let m = snippetary#re#matchend(snippetary#re#program('(de)?f'), 'f')
+  Assert !empty(m) && !has_key(m.groups, '1'), 'g=' . string(m)
+  let m = snippetary#re#matchend(snippetary#re#program('(de)?f'), 'def')
+  Assert m.groups['1'] ==# 'de', 'g=' . string(m)
+Execute (case-insensitive flag):
+  let m = snippetary#re#matchend(snippetary#re#program('(?i)([a-z]+)bar'),
+        \ 'FOObar')
+  Assert !empty(m) && m.groups['1'] ==# 'FOO', 'g=' . string(m)
+Execute (quantifiers: lazy, bounded, empty-exit):
+  let m = snippetary#re#matchend(snippetary#re#program('a*?b'), 'aab')
+  Assert m.whole ==# 'aab', 'g=' . string(m)
+  let m = snippetary#re#matchend(snippetary#re#program('a*?x'), 'bx')
+  Assert m.whole ==# 'x', 'g=' . string(m)
+  let m = snippetary#re#matchend(snippetary#re#program('a{2,4}'), 'aaa')
+  Assert m.whole ==# 'aaa', 'g=' . string(m)
+  Assert empty(snippetary#re#matchend(snippetary#re#program('a{2,4}'), 'a'))
+  let m = snippetary#re#matchend(snippetary#re#program('(de)?f'), 'f')
+  Assert !empty(m), 'zero-iteration exit after a failing body'
+Execute (classes and shorthand):
+  let m = snippetary#re#matchend(snippetary#re#program('[a-cx-z]+'), 'adz')
+  Assert m.whole ==# 'z', 'g=' . string(m)
+  Assert empty(snippetary#re#matchend(snippetary#re#program('[^\d]+'), 'ab1'))
+  let m = snippetary#re#matchend(snippetary#re#program('\b(de)?f'), 'x f')
+  Assert m.whole ==# 'f', 'g=' . string(m)
+Execute (lookaround, fixed-width lookbehind):
+  let m = snippetary#re#matchend(snippetary#re#program('(?=oo)'), 'foo')
+  " only e=1 exists, finditer skips the overlapping e=3 -> no match
+  Assert empty(m), 'g=' . string(m)
+  let m = snippetary#re#matchend(snippetary#re#program('(?<!\\)pi'), 'pi')
+  Assert !empty(m), 'negative lookbehind at string start is true'
+  Assert empty(snippetary#re#matchend(snippetary#re#program('(?<!\\)pi'),
+        \ '\pi'))
+  let m = snippetary#re#matchend(snippetary#re#program('(?<=\W)\.'), 'x .')
+  Assert m.whole ==# '.', 'g=' . string(m)
+Execute (anchors and literal escapes):
+  Assert empty(snippetary#re#matchend(snippetary#re#program('^im'),
+        \ 'ximport'))
+  Assert empty(snippetary#re#matchend(snippetary#re#program('^im'),
+        \ 'import'))
+  let m = snippetary#re#matchend(snippetary#re#program('^import'),
+        \ 'import')
+  Assert m.whole ==# 'import', 'g=' . string(m)
+  let m = snippetary#re#matchend(snippetary#re#program('\.'), 'a.')
+  Assert !empty(m) && m.whole ==# '.', 'escaped dot is a literal dot'
+Execute (fail closed: bad patterns never match):
+  unlet! g:snippetary_re_error
+  Assert empty(snippetary#re#matchend(snippetary#re#program('(['), 'a'))
+  Assert get(g:, 'snippetary_re_error', '') !=# '', 'error recorded'
+
+" end-to-end expansions
+Before:
+  let g:regex_dir = '/tmp/snippetary_vader_regex'
+  if isdirectory(g:regex_dir)
+    call delete(g:regex_dir, 'rf')
+  endif
+  call mkdir(g:regex_dir, 'p')
+  execute 'let g:snippetary_snippet_dirs = ["' . g:regex_dir . '"]'
+  filetype plugin indent on
+  new
+  setlocal filetype=rex
+  call snippetary#file#clear_cache()
+After:
+  bwipeout!
+
+Execute (the NOTE postfix snippet rewrites the whole matched span):
+  call writefile([
+        \ "snippet '(.*\\s*).*note' \"NOTE\" r",
+        \ 'NOTE: ${VISUAL}$0',
+        \ 'endsnippet',
+        \ "snippet '\\b(de)?f' \"Def\" r",
+        \ 'def $1',
+        \ 'endsnippet',
+        \ "snippet /(?i)([a-z]+)bar/ \"Bar\" r",
+        \ 'bar: `!v b:snippetary_match[1]`',
+        \ 'endsnippet'], g:regex_dir . '/_.snippets')
+  call snippetary#load_buffer()
+  call setline(1, 'some note')
+  normal! $
+  call feedkeys('a' . "\<tab>", 'xt')
+  Assert getline(1) ==# 'NOTE: ', 'l1=[' . getline(1) . ']'
+  call feedkeys("\<esc>", 'xt') | call feedkeys('a' . "\<tab>", 'xt')
+  Assert empty(snippetary#active()), 'session ends past the exit stop'
+
+  call snippetary#clean_current_buffer()
+  call setline(1, 'x f')
+  normal! $
+  call feedkeys('a' . "\<tab>", 'xt')
+  call feedkeys("\<esc>", 'xt')
+  Assert getline(1) ==# 'x def ', 'l1=[' . getline(1) . ']'
+  Assert b:snippetary_match['0'] ==# 'f', 'match context'
+
+  call snippetary#clean_current_buffer()
+  call setline(1, 'FOOBAR')
+  normal! $
+  call feedkeys('a' . "\<tab>", 'xt')
+  call feedkeys("\<esc>", 'xt')
+  Assert getline(1) ==# 'bar: FOO', 'l1=[' . getline(1) . ']'
+
+Execute (regex b-option and literal snippets coexist):
+  call writefile([
+        \ "snippet '\\bnote\\b' \"bnote\" rb",
+        \ 'BEGIN-NOTE',
+        \ 'endsnippet'], g:regex_dir . '/_.snippets')
+  call snippetary#load_buffer()
+  call setline(1, 'a note')
+  normal! $
+  call feedkeys('a' . "\<tab>", 'xt')
+  call feedkeys("\<esc>", 'xt')
+  Assert getline(1) ==# "a note\t", 'b: l1=[' . getline(1) . ']'
+  call snippetary#clean_current_buffer()
+  call setline(1, ' note')
+  normal! $
+  call feedkeys('a' . "\<tab>", 'xt')
+  call feedkeys("\<esc>", 'xt')
+  Assert getline(1) ==# ' BEGIN-NOTE', 'l1=[' . getline(1) . ']'

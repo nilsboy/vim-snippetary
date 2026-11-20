@@ -21,3 +21,7 @@
       plugin, so test/vimrc keeps the explicit source.
 - [x] add vim help doc
 - [x] test all mappings with vader
+
+- [x] regex ('r') snippets: python-re subset matcher (finditer +
+      end-at-cursor semantics, groups -> b:snippetary_match for !v),
+      corpus-driven tests
